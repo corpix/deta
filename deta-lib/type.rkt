@@ -8,9 +8,11 @@
          gregor
          gregor/time
          json
+         racket/string
          racket/contract
          racket/format
-         "private/type.rkt")
+         "private/type.rkt"
+         "private/dialect/standard.rkt")
 
 (provide
  type?
@@ -262,6 +264,41 @@
                       (->seconds     v)
                       (->nanoseconds v)
                       (->utc-offset  v))])))
+
+(define-type enum (keys)
+  #:declaration
+  (lambda (type dialect)
+    (case dialect
+      [(sqlite3) "INTEGER"]
+      [(postgresql)
+       (let ((keys (car (enum-field-keys type))))
+         (format "ENUM ~a"
+               (map (lambda (key) (string-append "'" (escape-string key) "'"))
+                    (sort (hash-keys keys)
+                          (lambda (l r) (< (hash-ref keys l)
+                                           (hash-ref keys r)))))))]))
+    #:constructor
+    (lambda (keys)
+      (enum-field (cons (for/hash [(key (in-list keys))
+                                   (index (in-naturals))]
+                          (values (~a key) index))
+                        (for/hash [(key (in-list keys))
+                                   (index (in-naturals))]
+                          (values index (~a key))))))
+    #:load
+    (lambda (type dialect v)
+      (let [(enum (cdr (enum-field-keys type)))]
+        (case dialect
+          [(sqlite3) (or (hash-ref (cdr (enum-field-keys type)) v #f)
+                         (raise-argument-error 'enum/f (format "one of ~a" (hash-keys enum)) v))]
+          [else v])))
+    #:dump
+    (lambda (type dialect v)
+      (let [(enum (car (enum-field-keys type)))]
+        (case dialect
+          [(sqlite3) (or (hash-ref enum v #f)
+                         (raise-argument-error 'enum/f (format "one of ~a" (hash-keys enum)) v))]
+          [else v]))))
 
 (define-type array (subtype size)
   #:contract-fn

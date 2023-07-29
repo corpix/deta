@@ -16,6 +16,7 @@
 
 (provide
  quote/standard
+ escape-string
  make-expr-emitter
  make-stmt-emitter
  write/sep)
@@ -30,6 +31,9 @@
 
 (define (quote-string s)
   (string-append "\"" s "\""))
+
+(define (escape-string s)
+  (string-replace s "'" "''"))
 
 (define (quote/standard e [reserved reserved-words])
   (cond
@@ -81,7 +85,7 @@
 
     [(scalar (and (? string?) str))
      (write-string "'")
-     (write-string (string-replace str "'" "''"))
+     (write-string (escape-string str))
      (write-string "'")]
 
     [(scalar (and (? vector?) v))

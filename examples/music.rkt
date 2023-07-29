@@ -11,6 +11,7 @@
 (define-schema album
   ([id id/f #:primary-key #:auto-increment]
    [title string/f #:unique]
+   [genre (enum/f '(grunge rock "neo soul"))]
    [artist-id id/f #:foreign-key (artist id)]
    [year-published integer/f #:nullable]))
 
@@ -22,12 +23,15 @@
 
  (insert! conn
           (make-album #:title "Nevermind"
+                      #:genre "grunge"
                       #:artist-id (artist-id (insert-one! conn (make-artist #:name "Nirvana")))
                       #:year-published 1991)
           (make-album #:title "Achtung Baby"
+                      #:genre "rock"
                       #:artist-id (artist-id (insert-one! conn (make-artist #:name "U2")))
                       #:year-published 1991)
           (make-album #:title "The Miseducation of Lauryn Hill"
+                      #:genre "neo soul"
                       #:artist-id (artist-id (insert-one! conn (make-artist #:name "Lauryn Hill")))
                       #:year-published 1998)))
 
@@ -52,6 +56,7 @@
   #:virtual
   ([id id/f #:primary-key #:auto-increment]
    [title string/f #:unique]
+   [genre (enum/f '(grunge rock "neo soul"))]
    [artist-id id/f #:foreign-key (artist id)]
    [year-published integer/f #:nullable]
    [name string/f]))
@@ -64,6 +69,7 @@
                                      #:on (= al.artist_id at.id))
                                (select al.* at.name)
                                (project-onto album-with-artists-schema)))])
-  (displayln (format "Artist: ~v, album: ~v"
+  (displayln (format "Artist: ~v, album: ~v, genre: ~a"
                      (album-with-artists-name a)
-                     (album-with-artists-title a))))
+                     (album-with-artists-title a)
+                     (album-with-artists-genre a))))
